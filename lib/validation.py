@@ -1,22 +1,49 @@
-"""Request validation helpers for POST /api/ask."""
 
-from lib.config import MAX_QUESTION_LENGTH, MIN_QUESTION_LENGTH
+"""Validate incoming question payloads."""
+
+MAX_QUESTION_LENGTH = 500
+MIN_QUESTION_LENGTH = 3
 
 
 def validate_question_payload(payload):
-    """Validate the JSON body for POST /api/ask.
+    if not isinstance(payload, dict):
+        return None, {
+            "error": "invalid_request",
+            "message": "Request body must be a JSON object.",
+        }
 
-    Return:
-        (question, None) when valid
-        (None, error_dict) when invalid
-    """
+    if "question" not in payload:
+        return None, {
+            "error": "missing_question",
+            "message": "A question field is required.",
+        }
 
-    # TODO: Reject non-dictionary payloads.
-    # TODO: Require a "question" field.
-    # TODO: Require the question to be a string.
-    # TODO: Strip whitespace.
-    # TODO: Reject blank questions.
-    # TODO: Reject questions shorter than MIN_QUESTION_LENGTH.
-    # TODO: Reject questions longer than MAX_QUESTION_LENGTH.
-    # TODO: Return (question, None) when valid.
-    raise NotImplementedError("Complete request validation.")
+    question = payload["question"]
+
+    if not isinstance(question, str):
+        return None, {
+            "error": "invalid_question",
+            "message": "Question must be a string.",
+        }
+
+    question = question.strip()
+
+    if not question:
+        return None, {
+            "error": "empty_question",
+            "message": "Question cannot be empty.",
+        }
+
+    if len(question) < MIN_QUESTION_LENGTH:
+        return None, {
+            "error": "short_question",
+            "message": "Question must contain at least 3 characters.",
+        }
+
+    if len(question) > MAX_QUESTION_LENGTH:
+        return None, {
+            "error": "long_question",
+            "message": "Question cannot exceed 500 characters.",
+        }
+
+    return question, None

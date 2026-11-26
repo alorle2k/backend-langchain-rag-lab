@@ -1,53 +1,50 @@
-"""LangChain-supported RAG workflow service."""
 
-from lib.config import CHAT_MODEL, DEFAULT_TOP_K
-from lib.response_formatter import (
-    format_fallback_response,
-    format_langchain_debug,
-    format_sources,
-    format_success_response,
-)
+"""LangChain-supported retrieval augmented generation service."""
+
 from lib.vector_store import retrieve_context
+from lib.prompt_templates import build_rag_prompt
+from lib.response_formatter import (
+    format_sources,
+    format_langchain_debug,
+    format_success_response,
+    format_fallback_response,
+)
+
+
+DEFAULT_TOP_K = 3
 
 
 class LangChainServiceError(Exception):
-    """Raised when the LangChain RAG service cannot complete a request."""
-
-
-def build_chat_model():
-    """Build the local chat model wrapper."""
-
-    # TODO: Import ChatOllama from langchain_ollama.
-    # TODO: Return ChatOllama(model=CHAT_MODEL, temperature=0).
-    raise NotImplementedError("Build the ChatOllama model wrapper.")
-
-
-def build_chain():
-    """Build the LangChain prompt to model to parser sequence."""
-
-    # TODO: Import StrOutputParser from langchain_core.output_parsers.
-    # TODO: Import build_rag_prompt from lib.prompt_templates.
-    # TODO: Build this sequence:
-    # prompt_template = build_rag_prompt()
-    # llm = build_chat_model()
-    # return prompt_template | llm | StrOutputParser()
-    raise NotImplementedError("Build the LangChain runnable sequence.")
+    """Raised when the LangChain service fails."""
 
 
 def has_usable_context(scored_documents):
-    """Return True when retrieval produced at least one document with text."""
-
-    # TODO: Return False for an empty list.
-    # TODO: Return True only if at least one document has non-blank page_content.
-    raise NotImplementedError("Check whether retrieved context is usable.")
+    return any(
+        isinstance(getattr(document, "page_content", None), str)
+        and document.page_content.strip()
+        for document, _ in scored_documents
+    )
 
 
 def format_context(scored_documents):
-    """Format retrieved LangChain documents into prompt-ready context text."""
+    blocks = []
 
-    # TODO: Build a readable context block for each retrieved document.
-    # Include source_id, title, category, section, chunk_id, distance, and text.
-    raise NotImplementedError("Format retrieved documents into prompt context.")
+    for document, distance in scored_documents:
+        metadata = document.metadata or {}
+
+        block = (
+            f"Source ID: {metadata.get('source_id', 'unknown')}\n"
+            f"Title: {metadata.get('title', 'Untitled')}\n"
+            f"Category: {metadata.get('category', 'unknown')}\n"
+            f"Section: {metadata.get('section', 'unknown')}\n"
+            f"Chunk ID: {metadata.get('chunk_id', 'unknown')}\n"
+            f"Distance: {distance}\n"
+            f"Text:\n{document.page_content}"
+        )
+
+        blocks.append(block)
+
+    return "\n\n---\n\n".join(blocks)
 
 
 def answer_question(
@@ -57,16 +54,61 @@ def answer_question(
     chain=None,
     top_k=DEFAULT_TOP_K,
 ):
-    """Run the LangChain-supported RAG workflow for one validated question."""
+    try:
+        cleaned_question = question.strip()
 
-    # TODO: Strip the question.
-    # TODO: Retrieve scored documents.
-    # TODO: If no usable context exists, return a safe fallback without calling the chain.
-    # TODO: Format the context.
-    # TODO: Build or use the provided chain.
-    # TODO: Invoke the chain with {"context": context, "question": cleaned_question}.
-    # TODO: Reject empty model output.
-    # TODO: Format sources and LangChain debug metadata.
-    # TODO: Return the success response.
-    # TODO: Wrap unexpected exceptions in LangChainServiceError.
-    raise NotImplementedError("Run the LangChain RAG service.")
+        if not cleaned_question:
+            raise ValueError("Question cannot be blank.")
+
+        scored_documents = retrieve_context(
+            cleaned_question,
+            vector_store=vector_store,
+            top_k=top_k,
+        )
+
+        if not has_usable_context(scored_documents):
+            debug = format_langchain_debug(
+                [],
+                "",
+                top_k,
+                True,
+            )
+            return format_fallback_response(debug)
+
+        context = format_context(scored_documents)
+
+        if chain is None:
+            from langchain_core.output_parsers import StrOutputParser
+
+            from lib.service import build_chat_model
+
+            chain = build_rag_prompt() | build_chat_model() | StrOutputParser()
+
+        result = chain.invoke({
+            "context": context,
+            "question": cleaned_question,
+        })
+
+        if not isinstance(result, str) or not result.strip():
+            raise LangChainServiceError("The model returned an empty response.")
+
+        sources = format_sources(scored_documents)
+
+        debug = format_langchain_debug(
+            scored_documents,
+            context,
+            top_k,
+            False,
+        )
+
+        return format_success_response(
+            result.strip(),
+            sources,
+            debug,
+        )
+
+    except LangChainServiceError:
+        raise
+
+    except Exception as exc:
+        raise LangChainServiceError(str(exc)) from exc

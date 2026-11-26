@@ -1,4 +1,8 @@
+
 """Prompt template helpers for the LangChain RAG workflow."""
+
+from langchain_core.prompts import ChatPromptTemplate
+
 
 SYSTEM_PROMPT = """
 You are an internal reliability assistant.
@@ -13,10 +17,12 @@ Keep the response concise, specific, and useful to an engineer during an inciden
 
 
 def build_rag_prompt():
-    """Build the reusable LangChain prompt template for RAG answers."""
-
-    # TODO: Import ChatPromptTemplate from langchain_core.prompts.
-    # TODO: Return a ChatPromptTemplate with:
-    # - a system message containing SYSTEM_PROMPT
-    # - a human message that includes both {context} and {question}
-    raise NotImplementedError("Build and return a ChatPromptTemplate.")
+    return ChatPromptTemplate.from_messages(
+        [
+            ("system", SYSTEM_PROMPT),
+            (
+                "human",
+                "Retrieved context:\n{context}\n\nQuestion:\n{question}",
+            ),
+        ]
+    )
