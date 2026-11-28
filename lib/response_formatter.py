@@ -10,11 +10,14 @@ COMPONENTS = [
 ]
 
 FALLBACK_ANSWER = (
-    "I do not have enough approved context to answer this question."
+    "I do not have enough approved runbook context "
+    "to answer this question."
 )
 
 
 def format_sources(scored_documents):
+    """Extract source metadata from retrieved documents."""
+
     sources = []
 
     for document, distance in scored_documents:
@@ -33,6 +36,8 @@ def format_sources(scored_documents):
 
 
 def format_langchain_debug(scored_documents, context, top_k, fallback):
+    """Build LangChain workflow debug information."""
+
     return {
         "chain_expression": CHAIN_EXPRESSION,
         "components": COMPONENTS,
@@ -49,6 +54,8 @@ def format_langchain_debug(scored_documents, context, top_k, fallback):
 
 
 def format_success_response(answer, sources, debug):
+    """Format a successful API response."""
+
     return {
         "answer": answer.strip(),
         "sources": sources,
@@ -57,6 +64,8 @@ def format_success_response(answer, sources, debug):
 
 
 def format_fallback_response(debug):
+    """Format a safe response when no usable context exists."""
+
     return {
         "answer": FALLBACK_ANSWER,
         "sources": [],
@@ -65,6 +74,8 @@ def format_fallback_response(debug):
 
 
 def format_error_response(error, message):
+    """Format an API error response."""
+
     return {
         "error": error,
         "message": message,

@@ -1,3 +1,4 @@
+
 """Document loading helpers for runbook chunks."""
 
 from dataclasses import dataclass
@@ -22,7 +23,7 @@ def load_runbook_chunks(path=DATA_PATH):
 
 
 def chunks_to_documents(chunks):
-    """Convert runbook chunk dictionaries into LangChain Document objects."""
+    """Convert runbook dictionaries into LangChain documents."""
 
     try:
         from langchain_core.documents import Document
@@ -30,6 +31,7 @@ def chunks_to_documents(chunks):
         Document = SimpleDocument
 
     documents = []
+
     for chunk in chunks:
         metadata = {
             "source_id": chunk.get("source_id"),
@@ -38,6 +40,12 @@ def chunks_to_documents(chunks):
             "section": chunk.get("section"),
             "chunk_id": chunk.get("chunk_id"),
         }
-        documents.append(Document(page_content=chunk.get("text", ""), metadata=metadata))
+
+        documents.append(
+            Document(
+                page_content=chunk.get("text", ""),
+                metadata=metadata,
+            )
+        )
 
     return documents

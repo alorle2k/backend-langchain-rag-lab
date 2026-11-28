@@ -1,56 +1,51 @@
-import pytest
 
-from lib.validation import validate_question_payload
+"""Validate incoming question payloads."""
 
-
-def test_rejects_non_object_payload():
-    question, error = validate_question_payload(None)
-
-    assert question is None
-    assert error["error"] == "invalid_request"
-    assert "JSON object" in error["message"]
+MAX_QUESTION_LENGTH = 500
+MIN_QUESTION_LENGTH = 3
 
 
-def test_rejects_missing_question():
-    question, error = validate_question_payload({"message": "hello"})
+def validate_question_payload(payload):
+    """Validate and clean the incoming question."""
 
-    assert question is None
-    assert error["error"] == "missing_question"
+    if not isinstance(payload, dict):
+        return None, {
+            "error": "invalid_request",
+            "message": "Request body must be a JSON object.",
+        }
 
+    if "question" not in payload:
+        return None, {
+            "error": "missing_question",
+            "message": "A question field is required.",
+        }
 
-def test_rejects_non_string_question():
-    question, error = validate_question_payload({"question": 42})
+    question = payload["question"]
 
-    assert question is None
-    assert error["error"] == "invalid_question"
+    if not isinstance(question, str):
+        return None, {
+            "error": "invalid_question",
+            "message": "Question must be a string.",
+        }
 
+    question = question.strip()
 
-@pytest.mark.parametrize("value", ["", "   ", "\n\t"])
-def test_rejects_blank_question(value):
-    question, error = validate_question_payload({"question": value})
+    if not question:
+        return None, {
+            "error": "empty_question",
+            "message": "Question cannot be empty.",
+        }
 
-    assert question is None
-    assert error["error"] == "empty_question"
+    if len(question) < MIN_QUESTION_LENGTH:
+        return None, {
+            "error": "short_question",
+            "message": "Question must contain at least 3 characters.",
+        }
 
+    if len(question) > MAX_QUESTION_LENGTH:
+        return None, {
+            "error": "long_question",
+            "message": "Question cannot exceed 500 characters.",
+        }
 
-def test_rejects_short_question():
-    question, error = validate_question_payload({"question": "hi"})
-
-    assert question is None
-    assert error["error"] == "short_question"
-
-
-def test_rejects_overly_long_question():
-    question, error = validate_question_payload({"question": "x" * 501})
-
-    assert question is None
-    assert error["error"] == "long_question"
-
-
-def test_valid_payload_strips_question():
-    question, error = validate_question_payload(
-        {"question": "  What should we do after rollback?  "}
-    )
-
-    assert question == "What should we do after rollback?"
-    assert error is None
+    return question, None

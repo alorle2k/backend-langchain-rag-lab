@@ -10,12 +10,18 @@ from lib.config import (
 
 
 def build_embeddings():
+    """Create the Ollama embedding model."""
+
     from langchain_ollama import OllamaEmbeddings
 
-    return OllamaEmbeddings(model=EMBEDDING_MODEL)
+    return OllamaEmbeddings(
+        model=EMBEDDING_MODEL
+    )
 
 
 def build_vector_store():
+    """Create or connect to the Chroma vector database."""
+
     from langchain_chroma import Chroma
 
     return Chroma(
@@ -25,11 +31,22 @@ def build_vector_store():
     )
 
 
-def retrieve_context(question, *, vector_store=None, top_k=DEFAULT_TOP_K):
+def retrieve_context(
+    question,
+    *,
+    vector_store=None,
+    top_k=DEFAULT_TOP_K,
+):
+    """Retrieve relevant approved runbook documents."""
+
     if not isinstance(question, str) or not question.strip():
         raise ValueError("Question cannot be blank.")
 
-    store = vector_store if vector_store is not None else build_vector_store()
+    store = (
+        vector_store
+        if vector_store is not None
+        else build_vector_store()
+    )
 
     return store.similarity_search_with_score(
         question.strip(),

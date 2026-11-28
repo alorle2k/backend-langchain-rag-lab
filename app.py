@@ -18,26 +18,17 @@ def create_app():
 
     @app.post("/api/ask")
     def ask():
-        """Accept a question and return a source-backed LangChain RAG response."""
+        """Accept a question and return a source-backed RAG response."""
 
-        # Get JSON request body
         payload = request.get_json(silent=True)
 
-        # Validate request
-        try:
-            question = validate_question_payload(payload)
-        except (ValueError, TypeError) as error:
-            return jsonify(
-                format_error_response(
-                    "invalid_request",
-                    str(error),
-                )
-            ), 400
+        question, validation_error = validate_question_payload(payload)
 
-        # Generate answer
+        if validation_error:
+            return jsonify(validation_error), 400
+
         try:
             response = answer_question(question)
-
             return jsonify(response), 200
 
         except LangChainServiceError as error:

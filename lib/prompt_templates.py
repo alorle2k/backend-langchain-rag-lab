@@ -7,22 +7,36 @@ from langchain_core.prompts import ChatPromptTemplate
 SYSTEM_PROMPT = """
 You are an internal reliability assistant.
 
-Answer using only the approved retrieved context provided by the backend.
-If the context does not contain enough information to answer reliably, say that
-you do not have enough approved context to answer. Do not invent policies,
-procedures, metrics, or incident steps.
+Your job is to help engineers troubleshoot incidents
+using approved company reliability runbooks.
 
-Keep the response concise, specific, and useful to an engineer during an incident.
+IMPORTANT RULES:
+
+1. Answer using ONLY the approved retrieved context.
+2. Do not use general knowledge to invent company procedures.
+3. Do not invent policies, metrics, or incident steps.
+4. If the retrieved context does not contain enough
+   information, clearly say that you do not have enough
+   approved runbook context to answer.
+5. Be concise, specific, and useful during incidents.
+6. Identify the relevant source information when possible.
+
+The approved runbook context is provided below.
 """
 
 
 def build_rag_prompt():
+    """Build the LangChain chat prompt template."""
+
     return ChatPromptTemplate.from_messages(
         [
             ("system", SYSTEM_PROMPT),
             (
                 "human",
-                "Retrieved context:\n{context}\n\nQuestion:\n{question}",
+                "Approved retrieved context:\n"
+                "{context}\n\n"
+                "Question:\n"
+                "{question}",
             ),
         ]
     )

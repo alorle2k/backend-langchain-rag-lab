@@ -1,62 +1,71 @@
-# Planning Notes: LangChain RAG API
 
-Complete each section before submitting. Replace every TODO with your own notes.
+# LangChain RAG Lab - Planning Notes
 
 ## 1. System Goal
 
-- User or role: TODO
-- Business problem: TODO
-- Approved knowledge source: TODO
-- Endpoint route: TODO
+The goal is to refactor the existing Flask RAG API
+using LangChain while preserving its existing behavior.
 
-## 2. Manual RAG Workflow Map
+The system must answer engineering questions using
+approved internal reliability runbooks.
 
-Name the manual RAG steps this LangChain version is organizing.
+## 2. Manual RAG Workflow
 
-- Receive question: TODO
-- Retrieve context: TODO
-- Build prompt: TODO
-- Call model: TODO
-- Parse or format output: TODO
-- Return sources: TODO
-- Verify quality: TODO
+1. Receive the user's question.
+2. Validate the question.
+3. Retrieve relevant runbook chunks from Chroma.
+4. Format retrieved documents and metadata.
+5. Insert the context and question into a prompt.
+6. Send the prompt to the Ollama chat model.
+7. Parse the model output.
+8. Return the answer and source metadata.
 
-## 3. LangChain Component Mapping
+## 3. LangChain Components
 
-Map the manual workflow to LangChain-supported pieces.
+- ChatPromptTemplate: Creates the grounded prompt.
+- OllamaEmbeddings: Creates document embeddings.
+- Chroma: Stores and retrieves runbook documents.
+- ChatOllama: Generates the answer.
+- StrOutputParser: Parses the model response.
 
-- Prompt string maps to: TODO
-- Chroma search logic maps to: TODO
-- Direct model call maps to: TODO
-- Function-to-function workflow maps to: TODO
-- Manual output cleanup maps to: TODO
-- Manual testing maps to: TODO
+## 4. Grounding and Safety
 
-## 4. Response Contract
+The model must answer using only approved retrieved
+runbook context.
 
-List the fields a successful response should include.
+If no usable context is available, the API returns
+a safe fallback response without calling the model.
 
-- TODO
-- TODO
-- TODO
+The system must not invent company procedures.
 
-## 5. Fallback Behavior
+## 5. Source Attribution
 
-Explain what the system should do when no approved context is available.
+Each retrieved document preserves its metadata:
 
-TODO
+- Source ID
+- Title
+- Category
+- Section
+- Chunk ID
+- Retrieval distance
 
-## 6. Verification Plan
+## 6. API Contract
 
-List at least four checks you should run before trusting the refactor.
+The POST /api/ask endpoint accepts a JSON question.
 
-- TODO
-- TODO
-- TODO
-- TODO
+A successful response includes:
 
-## 7. Reflection
+- answer
+- sources
+- langchain debug metadata
 
-Explain what LangChain simplified and what may be harder to inspect.
+Invalid requests return HTTP 400.
+LangChain service failures return HTTP 502.
 
-TODO
+## 7. Verification
+
+The application is tested using Pytest.
+
+The tests verify request validation, retrieval,
+prompt construction, LangChain workflow structure,
+fallback behavior, source attribution, and API responses.
